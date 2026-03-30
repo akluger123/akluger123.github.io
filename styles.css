@@ -94,6 +94,52 @@ body {
     line-height: 150%;
 }
 
+.form-group {
+    margin-bottom: 16px;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--background);
+    color: var(--text-primary);
+    transition: border-color 0.3s;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.auth-toggle {
+    margin-top: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.auth-toggle a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-toggle a:hover {
+    text-decoration: underline;
+}
+
+.auth-error {
+    background: var(--danger);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
 /* Buttons */
 .btn {
     padding: 12px 24px;

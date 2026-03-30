@@ -11,7 +11,19 @@ let sessions = [];
 const elements = {
     loginScreen: document.getElementById('login-screen'),
     mainScreen: document.getElementById('main-screen'),
-    githubLoginBtn: document.getElementById('github-login-btn'),
+    loginForm: document.getElementById('login-form'),
+    signupForm: document.getElementById('signup-form'),
+    signinBtn: document.getElementById('signin-btn'),
+    signupBtn: document.getElementById('signup-btn'),
+    showSignup: document.getElementById('show-signup'),
+    showLogin: document.getElementById('show-login'),
+    loginEmail: document.getElementById('login-email'),
+    loginPassword: document.getElementById('login-password'),
+    signupEmail: document.getElementById('signup-email'),
+    signupPassword: document.getElementById('signup-password'),
+    signupUsername: document.getElementById('signup-username'),
+    authError: document.getElementById('auth-error'),
+    signupError: document.getElementById('signup-error'),
     logoutBtn: document.getElementById('logout-btn'),
     userAvatar: document.getElementById('user-avatar'),
     userName: document.getElementById('user-name'),
@@ -52,13 +64,32 @@ function setupCodeEditor() {
 }
 
 function setupEventListeners() {
-    elements.githubLoginBtn.addEventListener('click', loginWithGitHub);
+    elements.signinBtn.addEventListener('click', signIn);
+    elements.signupBtn.addEventListener('click', signUp);
+    elements.showSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSignupForm();
+    });
+    elements.showLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginForm();
+    });
     elements.logoutBtn.addEventListener('click', logout);
     elements.generateBtn.addEventListener('click', generateCode);
     elements.saveBtn.addEventListener('click', saveSession);
     elements.copyBtn.addEventListener('click', copyCode);
     elements.refreshPreviewBtn.addEventListener('click', updatePreview);
     elements.newSessionBtn.addEventListener('click', createNewSession);
+
+    elements.loginEmail.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') signIn();
+    });
+    elements.loginPassword.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') signIn();
+    });
+    elements.signupUsername.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') signUp();
+    });
 
     supabase.auth.onAuthStateChange((event, session) => {
         (async () => {
@@ -81,22 +112,92 @@ async function checkAuthStatus() {
     }
 }
 
-async function loginWithGitHub() {
+function showLoginForm() {
+    elements.loginForm.classList.remove('hidden');
+    elements.signupForm.classList.add('hidden');
+    elements.authError.classList.add('hidden');
+    elements.signupError.classList.add('hidden');
+}
+
+function showSignupForm() {
+    elements.loginForm.classList.add('hidden');
+    elements.signupForm.classList.remove('hidden');
+    elements.authError.classList.add('hidden');
+    elements.signupError.classList.add('hidden');
+}
+
+async function signIn() {
+    const email = elements.loginEmail.value.trim();
+    const password = elements.loginPassword.value;
+
+    elements.authError.classList.add('hidden');
+
+    if (!email || !password) {
+        elements.authError.textContent = 'Please enter email and password';
+        elements.authError.classList.remove('hidden');
+        return;
+    }
+
     try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'github',
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            elements.authError.textContent = error.message;
+            elements.authError.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('Sign in error:', err);
+        elements.authError.textContent = 'An unexpected error occurred';
+        elements.authError.classList.remove('hidden');
+    }
+}
+
+async function signUp() {
+    const email = elements.signupEmail.value.trim();
+    const password = elements.signupPassword.value;
+    const username = elements.signupUsername.value.trim();
+
+    elements.signupError.classList.add('hidden');
+
+    if (!email || !password || !username) {
+        elements.signupError.textContent = 'Please fill in all fields';
+        elements.signupError.classList.remove('hidden');
+        return;
+    }
+
+    if (password.length < 6) {
+        elements.signupError.textContent = 'Password must be at least 6 characters';
+        elements.signupError.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
             options: {
-                redirectTo: window.location.href
+                data: {
+                    user_name: username,
+                    avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${username}`
+                }
             }
         });
 
         if (error) {
-            console.error('Login error:', error);
-            alert('Failed to login with GitHub: ' + error.message + '\n\nPlease make sure GitHub OAuth is configured in your Supabase project settings.');
+            elements.signupError.textContent = error.message;
+            elements.signupError.classList.remove('hidden');
+        } else {
+            elements.signupError.classList.add('hidden');
+            showLoginForm();
+            elements.loginEmail.value = email;
         }
     } catch (err) {
-        console.error('Unexpected error:', err);
-        alert('An unexpected error occurred. Please check the console for details.');
+        console.error('Sign up error:', err);
+        elements.signupError.textContent = 'An unexpected error occurred';
+        elements.signupError.classList.remove('hidden');
     }
 }
 
@@ -132,13 +233,16 @@ async function createOrUpdateProfile() {
         .eq('id', currentUser.id)
         .maybeSingle();
 
+    const username = currentUser.user_metadata.user_name || currentUser.email.split('@')[0];
+    const avatarUrl = currentUser.user_metadata.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${username}`;
+
     if (!existingProfile) {
         await supabase
             .from('profiles')
             .insert({
                 id: currentUser.id,
-                github_username: currentUser.user_metadata.user_name,
-                avatar_url: currentUser.user_metadata.avatar_url
+                github_username: username,
+                avatar_url: avatarUrl
             });
     }
 }
