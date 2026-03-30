@@ -82,16 +82,21 @@ async function checkAuthStatus() {
 }
 
 async function loginWithGitHub() {
-    const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-            redirectTo: window.location.origin + '/ai-coder.html'
-        }
-    });
+    try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'github',
+            options: {
+                redirectTo: window.location.href
+            }
+        });
 
-    if (error) {
-        console.error('Login error:', error);
-        alert('Failed to login with GitHub. Please try again.');
+        if (error) {
+            console.error('Login error:', error);
+            alert('Failed to login with GitHub: ' + error.message + '\n\nPlease make sure GitHub OAuth is configured in your Supabase project settings.');
+        }
+    } catch (err) {
+        console.error('Unexpected error:', err);
+        alert('An unexpected error occurred. Please check the console for details.');
     }
 }
 
